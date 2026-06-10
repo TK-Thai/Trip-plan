@@ -97,8 +97,8 @@ export function calculateSettlements(
       if (n.amount < maxDebtor.amount) maxDebtor = n;
     }
 
-    // ถ้าทั้งคู่ใกล้ 0 แสดงว่าจบแล้ว
-    if (maxCreditor.amount < EPSILON && maxDebtor.amount > -EPSILON) break;
+    // ถ้าฝั่งใดฝั่งหนึ่งยอดน้อยกว่า EPSILON แสดงว่าจบแล้ว
+    if (maxCreditor.amount < EPSILON || maxDebtor.amount > -EPSILON) break;
 
     // จำนวนที่ต้องจ่าย = min ของทั้งสอง
     const transferAmount = Math.min(maxCreditor.amount, -maxDebtor.amount);
