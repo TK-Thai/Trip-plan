@@ -1,27 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { trips, tripMembers, days } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { sql, eq, desc } from "drizzle-orm";
 
 // GET /api/trips - List all trips
 export async function GET() {
   try {
     const db = getDb();
+    
+    // Use Left Join and Group By to get member counts in a single query
     const allTrips = await db
-      .select()
+      .select({
+        trip: trips,
+        memberCount: sql<number>`count(${tripMembers.id})`,
+      })
       .from(trips)
+      .leftJoin(tripMembers, eq(trips.id, tripMembers.tripId))
+      .groupBy(trips.id)
       .orderBy(desc(trips.createdAt));
 
-    // Get member count for each trip
-    const tripsWithCounts = await Promise.all(
-      allTrips.map(async (trip) => {
-        const members = await db
-          .select()
-          .from(tripMembers)
-          .where(eq(tripMembers.tripId, trip.id));
-        return { ...trip, memberCount: members.length };
-      })
-    );
+    const tripsWithCounts = allTrips.map((row) => ({
+      ...row.trip,
+      memberCount: Number(row.memberCount),
+    }));
 
     return NextResponse.json(tripsWithCounts);
   } catch (error) {
