@@ -39,7 +39,7 @@ import {
   ClockCircleOutlined,
   DollarOutlined,
 } from "@ant-design/icons";
-import { calculateSettlements } from "@/lib/settlement";
+import { calculateSettlements, calculateBalances } from "@/lib/settlement";
 
 // Need dynamic import for Leaflet map to avoid SSR issues
 import dynamic from "next/dynamic";
@@ -442,7 +442,8 @@ function ExpenseView({
   onAddExpense: () => void;
 }) {
   const totalExpense = trip.expenses.reduce((sum, e) => sum + e.amount, 0);
-  const settlement = calculateSettlements(trip.members, trip.expenses);
+  const transactions = calculateSettlements(trip.expenses, trip.members);
+  const balances = calculateBalances(trip.expenses, trip.members);
 
   const expenseColumns = [
     { title: "วันที่", dataIndex: "createdAt", key: "date", render: (val: string) => formatDate(val) },
@@ -494,16 +495,16 @@ function ExpenseView({
       </Card>
 
       <Card title="สรุปการเคลียร์เงิน (Settlement)">
-        {settlement.transactions.length === 0 ? (
+        {transactions.length === 0 ? (
           <Empty description="ไม่มีรายการเคลียร์เงิน" />
         ) : (
           <Row gutter={[24, 24]}>
             <Col xs={24} md={12}>
               <Title level={5}>ใครต้องโอนให้ใคร?</Title>
               <Timeline
-                items={settlement.transactions.map((tx, idx) => {
-                  const from = trip.members.find((m) => m.id === tx.from);
-                  const to = trip.members.find((m) => m.id === tx.to);
+                items={transactions.map((tx, idx) => {
+                  const from = trip.members.find((m) => m.id === tx.fromId);
+                  const to = trip.members.find((m) => m.id === tx.toId);
                   return {
                     color: "red",
                     children: (
@@ -521,13 +522,13 @@ function ExpenseView({
             <Col xs={24} md={12}>
               <Title level={5}>สรุปยอดแต่ละคน</Title>
               <Table
-                dataSource={Object.entries(settlement.balances).map(([id, bal]) => ({ id: parseInt(id), bal }))}
-                rowKey="id"
+                dataSource={balances}
+                rowKey="memberId"
                 pagination={false}
                 size="small"
                 columns={[
-                  { title: "ชื่อ", dataIndex: "id", render: (id) => trip.members.find(m => m.id === id)?.name },
-                  { title: "สถานะ", dataIndex: "bal", render: (bal) => (
+                  { title: "ชื่อ", dataIndex: "name", render: (name) => name },
+                  { title: "สถานะ", dataIndex: "netBalance", render: (bal) => (
                       <Text type={bal > 0 ? "success" : bal < 0 ? "danger" : "secondary"}>
                         {bal > 0 ? `ได้คืน ฿${bal.toFixed(2)}` : bal < 0 ? `จ่ายเพิ่ม ฿${Math.abs(bal).toFixed(2)}` : "พอดี"}
                       </Text>
