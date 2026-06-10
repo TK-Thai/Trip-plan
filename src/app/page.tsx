@@ -271,9 +271,13 @@ function CreateTripModal({
 
       if (res.ok) {
         onCreated();
+      } else {
+        const errText = await res.text();
+        import("antd").then(({ message }) => message.error(`เกิดข้อผิดพลาด: ${errText}`));
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      import("antd").then(({ message }) => message.error(`ระบบมีปัญหา: ${err.message}`));
     } finally {
       setSaving(false);
     }
