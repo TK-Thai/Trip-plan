@@ -109,10 +109,10 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(result[0], { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("POST /api/trips error:", error);
     return NextResponse.json(
-      { error: "Failed to create trip" },
+      { error: `Failed to create trip: ${error.message}` },
       { status: 500 }
     );
   }
