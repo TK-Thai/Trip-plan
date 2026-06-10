@@ -3,15 +3,33 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Plus,
-  MapPin,
-  Calendar,
-  Users,
-  Plane,
-  X,
-  Trash2,
-  Loader2,
-} from "lucide-react";
+  Layout,
+  Typography,
+  Button,
+  Card,
+  Modal,
+  Form,
+  Input,
+  DatePicker,
+  Space,
+  Empty,
+  Skeleton,
+  Row,
+  Col,
+  theme,
+} from "antd";
+import {
+  PlusOutlined,
+  CalendarOutlined,
+  EnvironmentOutlined,
+  TeamOutlined,
+  DeleteOutlined,
+  GlobalOutlined,
+} from "@ant-design/icons";
+
+const { Header, Content } = Layout;
+const { Title, Paragraph, Text } = Typography;
+const { RangePicker } = DatePicker;
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -50,6 +68,7 @@ export default function HomePage() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const { token } = theme.useToken();
 
   /* fetch trips */
   const loadTrips = useCallback(async () => {
@@ -72,107 +91,140 @@ export default function HomePage() {
   }, [loadTrips]);
 
   return (
-    <div style={styles.page}>
-      {/* ---- Hero ---- */}
-      <header style={styles.hero}>
-        <div style={styles.heroInner}>
-          <div style={styles.heroIcon}>
-            <Plane size={38} color="#FF6B35" />
-          </div>
-          <h1 style={styles.heroTitle}>วางแผนทริปท่องเที่ยว</h1>
-          <p style={styles.heroSub}>
-            จัดการเส้นทาง กิจกรรม และค่าใช้จ่ายสำหรับทริปท่องเที่ยวไทย
-          </p>
-          <button
-            id="btn-create-trip"
-            className="btn btn-primary btn-lg"
-            style={{ marginTop: 24 }}
-            onClick={() => setShowModal(true)}
+    <Layout style={{ minHeight: "100vh" }}>
+      {/* ---- Hero / Header ---- */}
+      <Header
+        style={{
+          background: token.colorBgContainer,
+          height: "auto",
+          padding: "60px 24px 40px",
+          textAlign: "center",
+          borderBottom: `1px solid ${token.colorBorderSecondary}`,
+        }}
+      >
+        <div style={{ maxWidth: 600, margin: "0 auto" }}>
+          <div
+            style={{
+              width: 72,
+              height: 72,
+              borderRadius: "50%",
+              background: token.colorPrimaryBg,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: 20,
+              fontSize: 38,
+              color: token.colorPrimary,
+            }}
           >
-            <Plus size={20} />
+            <GlobalOutlined />
+          </div>
+          <Title level={1} style={{ marginBottom: 8, color: token.colorPrimaryText }}>
+            วางแผนทริปท่องเที่ยว
+          </Title>
+          <Paragraph type="secondary" style={{ fontSize: "1.1rem", marginBottom: 24 }}>
+            จัดการเส้นทาง กิจกรรม และค่าใช้จ่ายสำหรับทริปท่องเที่ยว
+          </Paragraph>
+          <Button
+            type="primary"
+            size="large"
+            icon={<PlusOutlined />}
+            onClick={() => setShowModal(true)}
+            id="btn-create-trip"
+          >
             สร้างทริปใหม่
-          </button>
+          </Button>
         </div>
-      </header>
+      </Header>
 
       {/* ---- Trip Grid ---- */}
-      <main style={styles.main}>
-        <div style={styles.sectionHeader}>
-          <h2>ทริปทั้งหมด</h2>
-          <span style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
-            {trips.length} ทริป
-          </span>
+      <Content style={{ maxWidth: 1100, margin: "0 auto", width: "100%", padding: "40px 24px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+          <Title level={2} style={{ margin: 0 }}>ทริปทั้งหมด</Title>
+          <Text type="secondary">{trips.length} ทริป</Text>
         </div>
 
         {loading ? (
-          <div style={styles.grid} className="stagger">
+          <Row gutter={[20, 20]}>
             {[1, 2, 3].map((i) => (
-              <div key={i} className="skeleton" style={styles.skeletonCard} />
+              <Col xs={24} sm={12} md={8} key={i}>
+                <Card>
+                  <Skeleton active paragraph={{ rows: 2 }} />
+                </Card>
+              </Col>
             ))}
-          </div>
+          </Row>
         ) : trips.length === 0 ? (
-          <div style={styles.emptyState} className="animate-fade-in">
-            <MapPin size={48} color="var(--text-muted)" />
-            <p style={{ color: "var(--text-muted)", marginTop: 12 }}>
-              ยังไม่มีทริป — เริ่มสร้างทริปแรกของคุณ!
-            </p>
-            <button
-              className="btn btn-primary"
-              style={{ marginTop: 16 }}
-              onClick={() => setShowModal(true)}
+          <Card style={{ textAlign: "center", padding: "40px 0" }}>
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description="ยังไม่มีทริป — เริ่มสร้างทริปแรกของคุณ!"
             >
-              <Plus size={18} />
-              สร้างทริปใหม่
-            </button>
-          </div>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => setShowModal(true)}>
+                สร้างทริปใหม่
+              </Button>
+            </Empty>
+          </Card>
         ) : (
-          <div style={styles.grid} className="stagger">
+          <Row gutter={[20, 20]}>
             {trips.map((trip) => (
-              <article
-                key={trip.id}
-                className="card card-clickable animate-slide-up"
-                style={styles.tripCard}
-                onClick={() => router.push(`/trip/${trip.id}`)}
-                id={`trip-card-${trip.id}`}
-              >
-                <div style={styles.cardAccent} />
-                <h3 style={styles.cardTitle}>{trip.name}</h3>
-                {trip.description && (
-                  <p style={styles.cardDesc}>{trip.description}</p>
-                )}
-                <div style={styles.cardMeta}>
-                  <span style={styles.metaItem}>
-                    <Calendar size={14} />
-                    {formatDate(trip.startDate)} — {formatDate(trip.endDate)}
-                  </span>
-                  <span style={styles.metaItem}>
-                    <MapPin size={14} />
-                    {daysBetween(trip.startDate, trip.endDate)} วัน
-                  </span>
-                  {trip.memberCount !== undefined && (
-                    <span style={styles.metaItem}>
-                      <Users size={14} />
-                      {trip.memberCount} คน
-                    </span>
+              <Col xs={24} sm={12} md={8} key={trip.id}>
+                <Card
+                  hoverable
+                  onClick={() => router.push(`/trip/${trip.id}`)}
+                  id={`trip-card-${trip.id}`}
+                  styles={{
+                    body: {
+                      borderTop: `4px solid ${token.colorPrimary}`,
+                      borderRadius: token.borderRadiusLG,
+                    }
+                  }}
+                >
+                  <Title level={4} style={{ marginTop: 0, marginBottom: 8 }}>{trip.name}</Title>
+                  {trip.description && (
+                    <Paragraph type="secondary" ellipsis={{ rows: 2 }} style={{ marginBottom: 16 }}>
+                      {trip.description}
+                    </Paragraph>
                   )}
-                </div>
-              </article>
+                  <Space wrap size={[16, 8]} style={{ color: token.colorTextSecondary }}>
+                    <Space size={4}>
+                      <CalendarOutlined />
+                      <Text type="secondary" style={{ fontSize: "0.85rem" }}>
+                        {formatDate(trip.startDate)} — {formatDate(trip.endDate)}
+                      </Text>
+                    </Space>
+                    <Space size={4}>
+                      <EnvironmentOutlined />
+                      <Text type="secondary" style={{ fontSize: "0.85rem" }}>
+                        {daysBetween(trip.startDate, trip.endDate)} วัน
+                      </Text>
+                    </Space>
+                    {trip.memberCount !== undefined && (
+                      <Space size={4}>
+                        <TeamOutlined />
+                        <Text type="secondary" style={{ fontSize: "0.85rem" }}>
+                          {trip.memberCount} คน
+                        </Text>
+                      </Space>
+                    )}
+                  </Space>
+                </Card>
+              </Col>
             ))}
-          </div>
+          </Row>
         )}
-      </main>
+      </Content>
 
       {/* ---- Create Modal ---- */}
-      {showModal && (
-        <CreateTripModal
-          onClose={() => setShowModal(false)}
-          onCreated={() => {
-            setShowModal(false);
-            loadTrips();
-          }}
-        />
-      )}
-    </div>
+      <CreateTripModal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        onCreated={() => {
+          setShowModal(false);
+          loadTrips();
+        }}
+      />
+    </Layout>
   );
 }
 
@@ -180,284 +232,130 @@ export default function HomePage() {
 /* Create Trip Modal                                                  */
 /* ------------------------------------------------------------------ */
 function CreateTripModal({
+  open,
   onClose,
   onCreated,
 }: {
+  open: boolean;
   onClose: () => void;
   onCreated: () => void;
 }) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [members, setMembers] = useState<string[]>([""]);
+  const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
 
-  const addMember = () => setMembers([...members, ""]);
-  const removeMember = (idx: number) =>
-    setMembers(members.filter((_, i) => i !== idx));
-  const updateMember = (idx: number, val: string) =>
-    setMembers(members.map((m, i) => (i === idx ? val : m)));
+  // Reset form when modal opens
+  useEffect(() => {
+    if (open) {
+      form.resetFields();
+      form.setFieldsValue({ members: [""] });
+    }
+  }, [open, form]);
 
-  const handleSubmit = async () => {
-    if (!name.trim() || !startDate || !endDate) return;
+  const handleSubmit = async (values: any) => {
     setSaving(true);
     try {
+      const { name, description, dates, members } = values;
+      const [start, end] = dates || [];
+
       const res = await fetch("/api/trips", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim(),
-          description: description.trim(),
-          startDate,
-          endDate,
-          members: members.filter((m) => m.trim()),
+          description: description?.trim() || "",
+          startDate: start ? start.format("YYYY-MM-DD") : "",
+          endDate: end ? end.format("YYYY-MM-DD") : "",
+          members: (members || []).filter((m: string) => m && m.trim()),
         }),
       });
-      if (res.ok) onCreated();
-    } catch {
-      /* API not ready */
+
+      if (res.ok) {
+        onCreated();
+      }
+    } catch (err) {
+      console.error(err);
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose} id="create-trip-modal">
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>🌴 สร้างทริปใหม่</h2>
-          <button className="btn-icon" onClick={onClose} id="btn-close-modal">
-            <X size={20} />
-          </button>
-        </div>
+    <Modal
+      title={<><GlobalOutlined style={{ marginRight: 8 }} /> สร้างทริปใหม่</>}
+      open={open}
+      onCancel={onClose}
+      onOk={() => form.submit()}
+      confirmLoading={saving}
+      okText="สร้างทริป"
+      cancelText="ยกเลิก"
+      destroyOnClose
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={handleSubmit}
+        initialValues={{ members: [""] }}
+      >
+        <Form.Item
+          name="name"
+          label="ชื่อทริป"
+          rules={[{ required: true, message: "กรุณาระบุชื่อทริป" }]}
+        >
+          <Input placeholder="เช่น ทริปเชียงใหม่ 2026" />
+        </Form.Item>
 
-        <div className="modal-body">
-          {/* Name */}
-          <div className="form-group">
-            <label className="form-label" htmlFor="trip-name">
-              ชื่อทริป
-            </label>
-            <input
-              id="trip-name"
-              className="form-input"
-              placeholder="เช่น ทริปเชียงใหม่ 2026"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
+        <Form.Item name="description" label="รายละเอียด">
+          <Input.TextArea rows={2} placeholder="รายละเอียดทริป (ไม่บังคับ)" />
+        </Form.Item>
 
-          {/* Description */}
-          <div className="form-group">
-            <label className="form-label" htmlFor="trip-description">
-              รายละเอียด
-            </label>
-            <textarea
-              id="trip-description"
-              className="form-textarea"
-              placeholder="รายละเอียดทริป (ไม่บังคับ)"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-            />
-          </div>
+        <Form.Item
+          name="dates"
+          label="ช่วงเวลาเดินทาง"
+          rules={[{ required: true, message: "กรุณาระบุช่วงเวลาเดินทาง" }]}
+        >
+          <RangePicker style={{ width: "100%" }} />
+        </Form.Item>
 
-          {/* Dates */}
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label" htmlFor="trip-start-date">
-                วันเริ่ม
-              </label>
-              <input
-                id="trip-start-date"
-                className="form-input"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="trip-end-date">
-                วันสิ้นสุด
-              </label>
-              <input
-                id="trip-end-date"
-                className="form-input"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Members */}
-          <div className="form-group">
-            <label className="form-label">สมาชิก</label>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {members.map((m, idx) => (
-                <div
-                  key={idx}
-                  style={{ display: "flex", gap: 8, alignItems: "center" }}
+        <Form.List name="members">
+          {(fields, { add, remove }) => (
+            <>
+              <div style={{ marginBottom: 8 }}>สมาชิก</div>
+              {fields.map((field, index) => (
+                <Form.Item
+                  {...field}
+                  key={field.key}
+                  style={{ marginBottom: 8 }}
                 >
-                  <input
-                    className="form-input"
-                    placeholder={`สมาชิกคนที่ ${idx + 1}`}
-                    value={m}
-                    onChange={(e) => updateMember(idx, e.target.value)}
-                    id={`member-input-${idx}`}
-                  />
-                  {members.length > 1 && (
-                    <button
-                      className="btn-icon"
-                      onClick={() => removeMember(idx)}
-                      title="ลบสมาชิก"
-                      id={`btn-remove-member-${idx}`}
-                    >
-                      <Trash2 size={16} color="var(--color-danger)" />
-                    </button>
-                  )}
-                </div>
+                  <Space style={{ display: 'flex', width: '100%' }}>
+                    <Input
+                      placeholder={`สมาชิกคนที่ ${index + 1}`}
+                      style={{ width: '100%' }}
+                      onChange={(e) => {
+                         const vals = form.getFieldValue("members");
+                         vals[index] = e.target.value;
+                         form.setFieldsValue({ members: vals });
+                      }}
+                    />
+                    {fields.length > 1 && (
+                      <Button
+                        type="text"
+                        danger
+                        icon={<DeleteOutlined />}
+                        onClick={() => remove(field.name)}
+                      />
+                    )}
+                  </Space>
+                </Form.Item>
               ))}
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={addMember}
-                style={{ alignSelf: "flex-start" }}
-                id="btn-add-member"
-              >
-                <Plus size={16} />
-                เพิ่มสมาชิก
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={onClose}>
-            ยกเลิก
-          </button>
-          <button
-            className="btn btn-primary"
-            onClick={handleSubmit}
-            disabled={!name.trim() || !startDate || !endDate || saving}
-            id="btn-submit-trip"
-          >
-            {saving ? <Loader2 size={18} className="spin" /> : <Plus size={18} />}
-            สร้างทริป
-          </button>
-        </div>
-      </div>
-    </div>
+              <Form.Item>
+                <Button type="dashed" onClick={() => add("")} block icon={<PlusOutlined />}>
+                  เพิ่มสมาชิก
+                </Button>
+              </Form.Item>
+            </>
+          )}
+        </Form.List>
+      </Form>
+    </Modal>
   );
 }
-
-/* ------------------------------------------------------------------ */
-/* Inline styles (layout-only, theme via CSS vars)                    */
-/* ------------------------------------------------------------------ */
-const styles: Record<string, React.CSSProperties> = {
-  page: {
-    minHeight: "100vh",
-  },
-  hero: {
-    background: "var(--bg-dark)",
-    borderBottom: "1px solid var(--border-color)",
-    padding: "60px 24px 52px",
-    textAlign: "center",
-  },
-  heroInner: {
-    maxWidth: 600,
-    margin: "0 auto",
-  },
-  heroIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: "50%",
-    background: "#fae8ff",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 20,
-    border: "2px solid #fdf4ff",
-  },
-  heroTitle: {
-    fontSize: "2.4rem",
-    fontWeight: 700,
-    background: "var(--accent-gradient)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
-    marginBottom: 8,
-  },
-  heroSub: {
-    color: "var(--text-secondary)",
-    fontSize: "1.1rem",
-    maxWidth: 440,
-    margin: "0 auto",
-    lineHeight: 1.7,
-  },
-  main: {
-    maxWidth: 1100,
-    margin: "0 auto",
-    padding: "40px 24px 80px",
-  },
-  sectionHeader: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 24,
-  },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-    gap: 20,
-  },
-  tripCard: {
-    position: "relative",
-    overflow: "hidden",
-    padding: "24px 24px 20px",
-  },
-  cardAccent: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-    background: "var(--accent-gradient)",
-  },
-  cardTitle: {
-    fontSize: "1.2rem",
-    marginBottom: 6,
-  },
-  cardDesc: {
-    color: "var(--text-secondary)",
-    fontSize: "0.9rem",
-    marginBottom: 14,
-    display: "-webkit-box",
-    WebkitLineClamp: 2,
-    WebkitBoxOrient: "vertical",
-    overflow: "hidden",
-  },
-  cardMeta: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 14,
-    marginTop: 8,
-  },
-  metaItem: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 5,
-    fontSize: "0.85rem",
-    color: "var(--text-muted)",
-  },
-  emptyState: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "80px 24px",
-    textAlign: "center",
-  },
-  skeletonCard: {
-    height: 160,
-    borderRadius: "var(--border-radius-lg)",
-  },
-};

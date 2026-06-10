@@ -1,17 +1,14 @@
 import type { Metadata } from "next";
-import { Inter, Prompt } from "next/font/google";
+import { Noto_Sans_Thai } from "next/font/google";
+import { AntdRegistry } from "@ant-design/nextjs-registry";
+import { ConfigProvider } from "antd";
+import thTH from "antd/locale/th_TH";
 import "./globals.css";
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
-
-const prompt = Prompt({
+const notoSansThai = Noto_Sans_Thai({
   subsets: ["thai", "latin"],
   weight: ["300", "400", "500", "600", "700"],
-  variable: "--font-prompt",
+  variable: "--font-noto-sans-thai",
   display: "swap",
 });
 
@@ -27,13 +24,38 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="th" className={`${inter.variable} ${prompt.variable}`}>
+    <html lang="th" className={`${notoSansThai.variable}`}>
       <body
         style={{
-          fontFamily: "var(--font-prompt), var(--font-inter), sans-serif",
+          fontFamily: "var(--font-noto-sans-thai), sans-serif",
+          margin: 0,
+          padding: 0,
         }}
       >
-        {children}
+        <AntdRegistry>
+          <ConfigProvider
+            locale={thTH}
+            theme={{
+              token: {
+                fontFamily: "var(--font-noto-sans-thai), sans-serif",
+                colorPrimary: "#22c55e", // Bright solid green
+                colorInfo: "#06b6d4",
+                colorSuccess: "#22c55e",
+                colorWarning: "#eab308",
+                colorError: "#f43f5e",
+                borderRadius: 8,
+              },
+              components: {
+                Layout: {
+                  bodyBg: "#f0fdf4", // Light green background
+                  headerBg: "#166534", // Dark green header
+                },
+              },
+            }}
+          >
+            {children}
+          </ConfigProvider>
+        </AntdRegistry>
       </body>
     </html>
   );
