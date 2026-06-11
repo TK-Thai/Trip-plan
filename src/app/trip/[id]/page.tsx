@@ -42,6 +42,7 @@ import {
   ClockCircleOutlined,
   DollarOutlined,
   SettingOutlined,
+  CloudOutlined,
 } from "@ant-design/icons";
 import { calculateSettlements, calculateBalances } from "@/lib/settlement";
 
@@ -161,7 +162,7 @@ export default function TripDetailPage({
 
   const [trip, setTrip] = useState<FullTrip | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("itinerary");
+  const [activeTab, setActiveTab] = useState("overview");
   const [selectedDayId, setSelectedDayId] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -287,6 +288,13 @@ export default function TripDetailPage({
           activeKey={activeTab}
           onChange={setActiveTab}
           items={[
+            {
+              key: "overview",
+              label: "ภาพรวม",
+              children: (
+                <OverviewTab trip={trip} setActiveTab={setActiveTab} setShowExpenseModal={setShowExpenseModal} />
+              ),
+            },
             {
               key: "itinerary",
               label: "แผนการเดินทาง",
@@ -903,4 +911,116 @@ function ExpenseModal({
       </Form>
     </Modal>
   );
+}
+
+/* ------------------------------------------------------------------ */
+/* Overview Tab                                                       */
+/* ------------------------------------------------------------------ */
+function OverviewTab({ trip, setActiveTab, setShowExpenseModal }: any) {
+  const [weather, setWeather] = useState<any>(null);
+  const [weatherLoading, setWeatherLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchWeather() {
+      try {
+        setWeatherLoading(true);
+        // Try to get coords from first activity
+        let lat = null;
+        let lng = null;
+        const act = trip.days.flatMap((d: any) => d.activities).find((a: any) => a.lat && a.lng);
+        if (act) {
+          lat = act.lat;
+          lng = act.lng;
+        } else {
+          // Fallback to geocoding the trip name
+          const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trip.name)}&count=1&language=th&format=json`);
+          const geoData = await geoRes.json();
+          if (geoData.results && geoData.results.length > 0) {
+            lat = geoData.results[0].latitude;
+            lng = geoData.results[0].longitude;
+          }
+        }
+        
+        if (lat && lng) {
+          const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`);
+          const wData = await wRes.json();
+          setWeather(wData.current_weather);
+        }
+      } catch (err) {
+        console.error("Failed to fetch weather", err);
+      } finally {
+        setWeatherLoading(false);
+      }
+    }
+    fetchWeather();
+  }, [trip.name, trip.days]);
+
+  const totalSpent = trip.expenses.reduce((sum: number, e: any) => sum + e.amount, 0);
+  const perPerson = trip.members.length > 0 ? totalSpent / trip.members.length : 0;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {/* Stats */}
+      <Row gutter={[16, 16]}>
+        <Col xs={12} md={6}>
+          <Card size="small" styles={{ body: { padding: 16 } }}>
+            <Typography.Text type="secondary" style={{ fontSize: 12, fontWeight: 600 }}>TOTAL SPENT</Typography.Text>
+            <Typography.Title level={3} style={{ margin: 0, color: '#1677ff' }}>฿{totalSpent.toLocaleString()}</Typography.Title>
+          </Card>
+        </Col>
+        <Col xs={12} md={6}>
+          <Card size="small" styles={{ body: { padding: 16 } }}>
+            <Typography.Text type="secondary" style={{ fontSize: 12, fontWeight: 600 }}>TRANSACTIONS</Typography.Text>
+            <Typography.Title level={3} style={{ margin: 0 }}>{trip.expenses.length}</Typography.Title>
+          </Card>
+        </Col>
+        <Col xs={12} md={6}>
+          <Card size="small" styles={{ body: { padding: 16 } }}>
+            <Typography.Text type="secondary" style={{ fontSize: 12, fontWeight: 600 }}>PER PERSON</Typography.Text>
+            <Typography.Title level={3} style={{ margin: 0 }}>฿{perPerson.toLocaleString(undefined, { maximumFractionDigits: 0 })}</Typography.Title>
+          </Card>
+        </Col>
+        <Col xs={12} md={6}>
+          <Card size="small" styles={{ body: { padding: 16 } }}>
+            <Typography.Text type="secondary" style={{ fontSize: 12, fontWeight: 600 }}>MEMBERS</Typography.Text>
+            <Typography.Title level={3} style={{ margin: 0 }}>{trip.members.length}</Typography.Title>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Weather */}
+      <Card size="small" title={<Space><CloudOutlined /> สภาพอากาศปัจจุบัน (Real-time)</Space>} loading={weatherLoading} styles={{ header: { padding: '0 16px', background: '#fafafa' }}}>
+        {weather ? (
+          <Space size={16} align="center">
+            <Typography.Title level={1} style={{ margin: 0, fontWeight: 400 }}>{weather.temperature}°C</Typography.Title>
+            <div>
+              <Typography.Text type="secondary" style={{ display: 'block' }}>ความเร็วลม: {weather.windspeed} km/h</Typography.Text>
+              <Typography.Text type="secondary">เวลาวัดล่าสุด: {weather.time.replace('T', ' ')}</Typography.Text>
+            </div>
+          </Space>
+        ) : (
+          <Typography.Text type="secondary">ไม่สามารถระบุตำแหน่งทริปเพื่อเช็กสภาพอากาศได้</Typography.Text>
+        )}
+      </Card>
+
+      {/* Quick Links */}
+      <Row gutter={[16, 16]}>
+        <Col xs={12}>
+          <Card hoverable onClick={() => setActiveTab("itinerary")} size="small" style={{ cursor: 'pointer' }}>
+            <Space><CalendarOutlined style={{ color: '#1677ff' }} /> แผนการเดินทาง</Space>
+          </Card>
+        </Col>
+        <Col xs={12}>
+          <Card hoverable onClick={() => setActiveTab("expenses")} size="small" style={{ cursor: 'pointer' }}>
+            <Space><DollarOutlined style={{ color: '#52c41a' }} /> ค่าใช้จ่าย</Space>
+          </Card>
+        </Col>
+        <Col xs={24}>
+          <Card hoverable onClick={() => setShowExpenseModal(true)} size="small" style={{ borderColor: '#1677ff', cursor: 'pointer', background: '#e6f4ff' }}>
+            <Space><PlusOutlined style={{ color: '#1677ff' }} /> <Typography.Text strong style={{ color: '#1677ff' }}>เพิ่มค่าใช้จ่ายใหม่</Typography.Text></Space>
+          </Card>
+        </Col>
+      </Row>
+    </div>
+  )
 }

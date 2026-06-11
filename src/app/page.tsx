@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import dayjs from "dayjs";
 import {
   Layout,
   Typography,
@@ -254,8 +255,7 @@ function CreateTripModal({
   const handleSubmit = async (values: any) => {
     setSaving(true);
     try {
-      const { name, description, dates, members } = values;
-      const [start, end] = dates || [];
+      const { name, description, startDate, endDate, members } = values;
 
       const res = await fetch("/api/trips", {
         method: "POST",
@@ -263,8 +263,8 @@ function CreateTripModal({
         body: JSON.stringify({
           name: name.trim(),
           description: description?.trim() || "",
-          startDate: start ? start.format("YYYY-MM-DD") : "",
-          endDate: end ? end.format("YYYY-MM-DD") : "",
+          startDate: startDate ? startDate.format("YYYY-MM-DD") : "",
+          endDate: endDate ? endDate.format("YYYY-MM-DD") : "",
           members: (members || []).filter((m: string) => m && m.trim()),
         }),
       });
@@ -312,13 +312,34 @@ function CreateTripModal({
           <Input.TextArea rows={2} placeholder="รายละเอียดทริป (ไม่บังคับ)" />
         </Form.Item>
 
-        <Form.Item
-          name="dates"
-          label="ช่วงเวลาเดินทาง"
-          rules={[{ required: true, message: "กรุณาระบุช่วงเวลาเดินทาง" }]}
-        >
-          <RangePicker style={{ width: "100%" }} />
-        </Form.Item>
+        <Row gutter={16}>
+          <Col xs={24} sm={12}>
+            <Form.Item
+              name="startDate"
+              label="วันเริ่มต้น"
+              rules={[{ required: true, message: "กรุณาระบุวันเริ่มต้น" }]}
+            >
+              <DatePicker 
+                style={{ width: "100%" }} 
+                size="large"
+                disabledDate={(current) => current && current < dayjs().startOf('day')}
+              />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={12}>
+            <Form.Item
+              name="endDate"
+              label="วันสิ้นสุด"
+              rules={[{ required: true, message: "กรุณาระบุวันสิ้นสุด" }]}
+            >
+              <DatePicker 
+                style={{ width: "100%" }} 
+                size="large"
+                disabledDate={(current) => current && current < dayjs().startOf('day')}
+              />
+            </Form.Item>
+          </Col>
+        </Row>
 
         <Form.List name="members">
           {(fields, { add, remove }) => (
