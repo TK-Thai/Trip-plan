@@ -595,11 +595,13 @@ function ActivityModal({
       // Auto-fetch coordinates if location name is provided but coords are missing
       if (values.locationName && (!finalLat || !finalLng)) {
         try {
-          const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(values.locationName)}&count=1&language=th&format=json`);
+          const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(values.locationName)}&format=json&limit=1`);
           const geoData = await geoRes.json();
-          if (geoData.results && geoData.results.length > 0) {
-            finalLat = geoData.results[0].latitude;
-            finalLng = geoData.results[0].longitude;
+          if (geoData && geoData.length > 0) {
+            finalLat = parseFloat(geoData[0].lat);
+            finalLng = parseFloat(geoData[0].lon);
+          } else {
+            message.warning("ไม่พบพิกัดสำหรับสถานที่นี้ กรุณาปักหมุดเอง");
           }
         } catch (e) {
           console.warn("Failed to auto-geocode location", e);
