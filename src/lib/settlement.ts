@@ -129,5 +129,13 @@ export function calculateSettlements(
     }
   }
 
+  // Sort by fromName so the same person's debts are grouped together
+  settlements.sort((a, b) => {
+    if (a.fromName !== b.fromName) {
+      return a.fromName.localeCompare(b.fromName);
+    }
+    return a.toName.localeCompare(b.toName);
+  });
+
   return settlements;
 }
