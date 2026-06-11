@@ -20,38 +20,47 @@ export async function GET(
     const tripId = parseInt(id);
     const db = getDb();
 
-    const tripResult = await db
-      .select()
-      .from(trips)
-      .where(eq(trips.id, tripId));
-      
+    const [tripResult, members, tripDays, tripExpenses, allActivities, allSplits] = await Promise.all([
+      db.select().from(trips).where(eq(trips.id, tripId)),
+      db.select().from(tripMembers).where(eq(tripMembers.tripId, tripId)),
+      db.select().from(days).where(eq(days.tripId, tripId)).orderBy(asc(days.dayNumber)),
+      db.select().from(expenses).where(eq(expenses.tripId, tripId)),
+      db.select({
+        id: activities.id,
+        dayId: activities.dayId,
+        sortOrder: activities.sortOrder,
+        time: activities.time,
+        title: activities.title,
+        description: activities.description,
+        category: activities.category,
+        lat: activities.lat,
+        lng: activities.lng,
+        locationName: activities.locationName,
+      })
+      .from(activities)
+      .innerJoin(days, eq(activities.dayId, days.id))
+      .where(eq(days.tripId, tripId))
+      .orderBy(asc(activities.sortOrder)),
+      db.select({
+        id: expenseSplits.id,
+        expenseId: expenseSplits.expenseId,
+        memberId: expenseSplits.memberId,
+        shareAmount: expenseSplits.shareAmount,
+      })
+      .from(expenseSplits)
+      .innerJoin(expenses, eq(expenseSplits.expenseId, expenses.id))
+      .where(eq(expenses.tripId, tripId))
+    ]);
+
     if (tripResult.length === 0) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
     const trip = tripResult[0];
 
-    const [members, tripDays, tripExpenses] = await Promise.all([
-      db.select().from(tripMembers).where(eq(tripMembers.tripId, tripId)),
-      db.select().from(days).where(eq(days.tripId, tripId)).orderBy(asc(days.dayNumber)),
-      db.select().from(expenses).where(eq(expenses.tripId, tripId))
-    ]);
-
-    // Fetch all activities for these days at once
-    const dayIds = tripDays.map(d => d.id);
-    const allActivities = dayIds.length > 0 
-      ? await db.select().from(activities).where(inArray(activities.dayId, dayIds)).orderBy(asc(activities.sortOrder))
-      : [];
-
     const daysWithActivities = tripDays.map((day) => ({
       ...day,
       activities: allActivities.filter(a => a.dayId === day.id)
     }));
-
-    // Fetch all splits for these expenses at once
-    const expenseIds = tripExpenses.map(e => e.id);
-    const allSplits = expenseIds.length > 0
-      ? await db.select().from(expenseSplits).where(inArray(expenseSplits.expenseId, expenseIds))
-      : [];
 
     const expensesWithSplits = tripExpenses.map((expense) => ({
       ...expense,
