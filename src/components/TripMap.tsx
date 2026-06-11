@@ -187,6 +187,16 @@ export default function TripMap({ activities }: TripMapProps) {
                   Day {act.dayNumber}
                 </div>
               )}
+              <div style={{ marginTop: 8 }}>
+                <a 
+                  href={`https://www.google.com/maps/search/?api=1&query=${act.lat},${act.lng}`} 
+                  target="_blank" 
+                  rel="noreferrer"
+                  style={{ fontSize: "0.85rem", color: "#1677ff", textDecoration: "none", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}
+                >
+                  เปิดใน Google Maps 🗺️
+                </a>
+              </div>
             </div>
           </Popup>
         </Marker>

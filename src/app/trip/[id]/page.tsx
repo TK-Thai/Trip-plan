@@ -368,10 +368,23 @@ export default function TripDetailPage({
                                       </Space>
                                     </div>
                                     <Tag color={CATEGORY_COLORS[act.category]}>{CATEGORY_LABELS[act.category]}</Tag>
-                                    {act.locationName && (
-                                      <Text type="secondary" style={{ display: "block", marginTop: 4, fontSize: 13 }}>
-                                        <EnvironmentOutlined /> {act.locationName}
-                                      </Text>
+                                    {(act.locationName || (act.lat && act.lng)) && (
+                                      <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                        {act.locationName && (
+                                          <Text type="secondary" style={{ fontSize: 13 }}>
+                                            <EnvironmentOutlined /> {act.locationName}
+                                          </Text>
+                                        )}
+                                        <Button 
+                                          type="link" 
+                                          size="small" 
+                                          style={{ padding: 0 }}
+                                          href={`https://www.google.com/maps/search/?api=1&query=${act.lat && act.lng ? `${act.lat},${act.lng}` : encodeURIComponent(act.locationName)}`}
+                                          target="_blank"
+                                        >
+                                          เปิดใน Google Maps
+                                        </Button>
+                                      </div>
                                     )}
                                     {act.description && <Paragraph style={{ marginTop: 8 }}>{act.description}</Paragraph>}
                                   </div>
