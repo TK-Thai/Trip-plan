@@ -267,23 +267,26 @@ export default function TripDetailPage({
         style={{
           background: token.colorBgContainer,
           borderBottom: `1px solid ${token.colorBorderSecondary}`,
-          padding: "0 24px",
+          padding: "16px 24px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          height: 80,
+          minHeight: 80,
+          height: "auto",
+          gap: 16,
+          flexWrap: "wrap",
         }}
       >
-        <Space size={16} align="center">
-          <Button icon={<ArrowLeftOutlined />} onClick={() => router.push("/")} type="text" size="large" />
+        <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flex: 1, minWidth: 250 }}>
+          <Button icon={<ArrowLeftOutlined />} onClick={() => router.push("/")} type="text" size="large" style={{ marginTop: 2 }} />
           <div>
-            <Title level={4} style={{ margin: 0 }}>{trip.name}</Title>
-            <Space size={16} style={{ color: token.colorTextSecondary, fontSize: 13 }}>
-              <Space size={4}><CalendarOutlined />{formatDate(trip.startDate)} — {formatDate(trip.endDate)}</Space>
-              <Space size={4}><TeamOutlined />{trip.members.length} คน</Space>
-            </Space>
+            <Title level={4} style={{ margin: 0, marginBottom: 4, lineHeight: 1.4 }}>{trip.name}</Title>
+            <div style={{ color: token.colorTextSecondary, fontSize: 13, display: "flex", flexWrap: "wrap", gap: "4px 16px" }}>
+              <div style={{ whiteSpace: "nowrap" }}><CalendarOutlined style={{ marginRight: 4 }} />{formatDate(trip.startDate)} — {formatDate(trip.endDate)}</div>
+              <div style={{ whiteSpace: "nowrap" }}><TeamOutlined style={{ marginRight: 4 }} />{trip.members.length} คน</div>
+            </div>
           </div>
-        </Space>
+        </div>
         <Button
           type={copied ? "primary" : "default"}
           icon={copied ? <CheckCircleOutlined /> : <ShareAltOutlined />}
