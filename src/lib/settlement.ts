@@ -67,56 +67,66 @@ export function calculateBalances(
 }
 
 /**
- * Minimum Cash Flow Algorithm
- * ใช้ greedy approach จับคู่ max creditor กับ max debtor
+ * Pairwise Net Balance Algorithm
+ * คำนวณแบบตรงไปตรงมา ใครติดเงินใครในแต่ละบิล หักลบกันแค่สองคนนั้น (ไม่จับคู่ข้ามคนแบบ Simplify Debts)
+ * ทำให้ยอดที่โอนตรงกับบิลที่หารกันเป๊ะๆ ป้องกันการสับสน
  */
 export function calculateSettlements(
   expenses: ExpenseEntry[],
   members: { id: number; name: string }[]
 ): Settlement[] {
-  const balances = calculateBalances(expenses, members);
+  // owes[debtor][creditor] = amount
+  const owes = new Map<number, Map<number, number>>();
+  members.forEach((m) => owes.set(m.id, new Map()));
+
+  // 1. รวมยอดหนี้ทั้งหมดแบบตรงไปตรงมา
+  for (const expense of expenses) {
+    const creditor = expense.paidById;
+    for (const split of expense.splits) {
+      const debtor = split.memberId;
+      if (debtor !== creditor && owes.has(debtor)) {
+        const current = owes.get(debtor)!.get(creditor) || 0;
+        owes.get(debtor)!.set(creditor, current + split.shareAmount);
+      }
+    }
+  }
+
   const settlements: Settlement[] = [];
 
-  // สร้าง array ของ creditors และ debtors
-  const netAmounts = balances.map((b) => ({
-    memberId: b.memberId,
-    name: b.name,
-    amount: b.netBalance,
-  }));
+  // 2. หักลบยอดระหว่างคู่ (Pairwise net balance)
+  for (let i = 0; i < members.length; i++) {
+    for (let j = i + 1; j < members.length; j++) {
+      const a = members[i];
+      const b = members[j];
 
-  // Greedy: จับคู่ max creditor กับ max debtor ซ้ำจนหมด
-  const EPSILON = 0.01;
+      const aOwesB = owes.get(a.id)!.get(b.id) || 0;
+      const bOwesA = owes.get(b.id)!.get(a.id) || 0;
 
-  while (true) {
-    // หา max creditor (owed most)
-    let maxCreditor = { memberId: -1, name: "", amount: -Infinity };
-    let maxDebtor = { memberId: -1, name: "", amount: Infinity };
-
-    for (const n of netAmounts) {
-      if (n.amount > maxCreditor.amount) maxCreditor = n;
-      if (n.amount < maxDebtor.amount) maxDebtor = n;
+      const net = aOwesB - bOwesA;
+      
+      if (Math.abs(net) > 0.01) {
+        const roundedNet = Math.round(Math.abs(net) * 100) / 100;
+        if (net > 0) {
+          // a owes b
+          settlements.push({
+            fromId: a.id,
+            fromName: a.name,
+            toId: b.id,
+            toName: b.name,
+            amount: roundedNet,
+          });
+        } else {
+          // b owes a
+          settlements.push({
+            fromId: b.id,
+            fromName: b.name,
+            toId: a.id,
+            toName: a.name,
+            amount: roundedNet,
+          });
+        }
+      }
     }
-
-    // ถ้าฝั่งใดฝั่งหนึ่งยอดน้อยกว่า EPSILON แสดงว่าจบแล้ว
-    if (maxCreditor.amount < EPSILON || maxDebtor.amount > -EPSILON) break;
-
-    // จำนวนที่ต้องจ่าย = min ของทั้งสอง
-    const transferAmount = Math.min(maxCreditor.amount, -maxDebtor.amount);
-    const roundedAmount = Math.round(transferAmount * 100) / 100;
-
-    if (roundedAmount > 0) {
-      settlements.push({
-        fromId: maxDebtor.memberId,
-        fromName: maxDebtor.name,
-        toId: maxCreditor.memberId,
-        toName: maxCreditor.name,
-        amount: roundedAmount,
-      });
-    }
-
-    // Update balances
-    maxCreditor.amount -= transferAmount;
-    maxDebtor.amount += transferAmount;
   }
 
   return settlements;
