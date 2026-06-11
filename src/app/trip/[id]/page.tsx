@@ -181,6 +181,7 @@ export default function TripDetailPage({
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [showEditTripModal, setShowEditTripModal] = useState(false);
 
   const { token } = theme.useToken();
 
@@ -239,6 +240,25 @@ export default function TripDetailPage({
     }
   };
 
+  const handleUpdateTripName = async (values: { name: string }) => {
+    try {
+      const res = await fetch(`/api/trips/${trip?.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: values.name }),
+      });
+      if (res.ok) {
+        message.success("อัปเดตชื่อทริปเรียบร้อย");
+        setShowEditTripModal(false);
+        loadTrip();
+      } else {
+        message.error("อัปเดตชื่อทริปไม่สำเร็จ");
+      }
+    } catch (err) {
+      message.error("อัปเดตชื่อทริปไม่สำเร็จ");
+    }
+  };
+
   if (loading || !trip) {
     return (
       <Layout style={{ minHeight: "100vh", justifyContent: "center", alignItems: "center" }}>
@@ -280,7 +300,15 @@ export default function TripDetailPage({
         <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flex: 1, minWidth: 250 }}>
           <Button icon={<ArrowLeftOutlined />} onClick={() => router.push("/")} type="text" size="large" style={{ marginTop: 2 }} />
           <div>
-            <Title level={4} style={{ margin: 0, marginBottom: 4, lineHeight: 1.4 }}>{trip.name}</Title>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+              <Title level={4} style={{ margin: 0, lineHeight: 1.4 }}>{trip.name}</Title>
+              <Button 
+                type="text" 
+                size="small" 
+                icon={<EditOutlined />} 
+                onClick={() => setShowEditTripModal(true)} 
+              />
+            </div>
             <div style={{ color: token.colorTextSecondary, fontSize: 13, display: "flex", flexWrap: "wrap", gap: "4px 16px" }}>
               <div style={{ whiteSpace: "nowrap" }}><CalendarOutlined style={{ marginRight: 4 }} />{formatDate(trip.startDate)} — {formatDate(trip.endDate)}</div>
               <div style={{ whiteSpace: "nowrap" }}><TeamOutlined style={{ marginRight: 4 }} />{trip.members.length} คน</div>
@@ -443,24 +471,44 @@ export default function TripDetailPage({
         activity={editingActivity}
         dayId={selectedDayId!}
         onClose={() => setShowActivityModal(false)}
-        onSaved={() => {
-          setShowActivityModal(false);
-          loadTrip();
-        }}
+        onSaved={loadTrip}
       />
 
-      {showExpenseModal && (
-        <ExpenseModal
-          open={showExpenseModal}
-          expense={editingExpense}
-          trip={trip}
-          onClose={() => setShowExpenseModal(false)}
-          onSaved={() => {
-            setShowExpenseModal(false);
-            loadTrip();
-          }}
-        />
-      )}
+      <ExpenseModal
+        open={showExpenseModal}
+        expense={editingExpense}
+        trip={trip}
+        onClose={() => setShowExpenseModal(false)}
+        onSaved={loadTrip}
+      />
+
+      <Modal
+        title="แก้ไขชื่อทริป"
+        open={showEditTripModal}
+        onCancel={() => setShowEditTripModal(false)}
+        footer={null}
+        destroyOnClose
+      >
+        <Form
+          layout="vertical"
+          initialValues={{ name: trip.name }}
+          onFinish={handleUpdateTripName}
+        >
+          <Form.Item
+            label="ชื่อทริป"
+            name="name"
+            rules={[{ required: true, message: "กรุณาระบุชื่อทริป" }]}
+          >
+            <Input placeholder="เช่น ทริปเชียงใหม่ 3 วัน 2 คืน" />
+          </Form.Item>
+          <Form.Item style={{ marginBottom: 0, textAlign: "right" }}>
+            <Space>
+              <Button onClick={() => setShowEditTripModal(false)}>ยกเลิก</Button>
+              <Button type="primary" htmlType="submit">บันทึก</Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
     </Layout>
   );
 }

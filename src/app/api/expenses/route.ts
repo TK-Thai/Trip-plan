@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { expenses, expenseSplits } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { censorText } from "@/lib/censor";
 
 // POST /api/expenses - Create expense
 export async function POST(request: NextRequest) {
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
       .values({
         tripId,
         dayId: dayId || null,
-        description,
+        description: censorText(description),
         amount,
         category: category || "other",
         paidById,
@@ -104,7 +105,7 @@ export async function PUT(request: NextRequest) {
     const db = getDb();
 
     const updateData: Record<string, unknown> = {};
-    if (description !== undefined) updateData.description = description;
+    if (description !== undefined) updateData.description = censorText(description);
     if (amount !== undefined) updateData.amount = amount;
     if (category !== undefined) updateData.category = category;
     if (paidById !== undefined) updateData.paidById = paidById;

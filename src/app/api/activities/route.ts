@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { activities } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
+import { censorText } from "@/lib/censor";
 
 // POST /api/activities - Create activity
 export async function POST(request: NextRequest) {
@@ -35,12 +36,12 @@ export async function POST(request: NextRequest) {
         dayId,
         sortOrder: order,
         time: time || "",
-        title,
-        description: description || "",
+        title: censorText(title),
+        description: description ? censorText(description) : "",
         category: category || "activity",
         lat: lat || null,
         lng: lng || null,
-        locationName: locationName || "",
+        locationName: locationName ? censorText(locationName) : "",
       })
       .returning();
 
@@ -71,12 +72,12 @@ export async function PUT(request: NextRequest) {
 
     const updateData: Record<string, unknown> = {};
     if (time !== undefined) updateData.time = time;
-    if (title !== undefined) updateData.title = title;
-    if (description !== undefined) updateData.description = description;
+    if (title !== undefined) updateData.title = censorText(title);
+    if (description !== undefined) updateData.description = censorText(description);
     if (category !== undefined) updateData.category = category;
     if (lat !== undefined) updateData.lat = lat;
     if (lng !== undefined) updateData.lng = lng;
-    if (locationName !== undefined) updateData.locationName = locationName;
+    if (locationName !== undefined) updateData.locationName = censorText(locationName);
     if (sortOrder !== undefined) updateData.sortOrder = sortOrder;
 
     const result = await db

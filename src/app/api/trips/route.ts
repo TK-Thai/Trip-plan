@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { trips, tripMembers, days } from "@/db/schema";
 import { sql, eq, desc } from "drizzle-orm";
+import { censorText } from "@/lib/censor";
 
 // GET /api/trips - List all trips
 export async function GET() {
@@ -53,8 +54,8 @@ export async function POST(request: NextRequest) {
     const result = await db
       .insert(trips)
       .values({
-        name,
-        description: description || "",
+        name: censorText(name),
+        description: description ? censorText(description) : "",
         startDate,
         endDate,
         createdAt: new Date().toISOString(),

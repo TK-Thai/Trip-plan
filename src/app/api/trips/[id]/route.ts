@@ -9,6 +9,7 @@ import {
   expenseSplits,
 } from "@/db/schema";
 import { eq, asc, inArray } from "drizzle-orm";
+import { censorText } from "@/lib/censor";
 
 // GET /api/trips/[id] - Get full trip data
 export async function GET(
@@ -96,8 +97,8 @@ export async function PUT(
     const result = await db
       .update(trips)
       .set({
-        name: body.name,
-        description: body.description,
+        name: body.name ? censorText(body.name) : body.name,
+        description: body.description ? censorText(body.description) : body.description,
       })
       .where(eq(trips.id, tripId))
       .returning();
