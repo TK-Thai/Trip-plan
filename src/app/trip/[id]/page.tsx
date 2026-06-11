@@ -655,14 +655,12 @@ function ExpenseView({
                 pagination={false}
                 size="small"
                 columns={[
-                  { title: "ชื่อ", dataIndex: "name", render: (name) => name },
-                  { title: "สถานะ", dataIndex: "netBalance", render: (bal) => (
-                      <Text type={bal > 0 ? "success" : bal < 0 ? "danger" : "secondary"}>
-                        {bal > 0 ? `ได้คืน ฿${bal.toFixed(2)}` : bal < 0 ? `จ่ายเพิ่ม ฿${Math.abs(bal).toFixed(2)}` : "พอดี"}
-                      </Text>
-                    )
-                  }
+                  { title: "ชื่อ", dataIndex: "name", key: "name", render: (name) => <Text strong>{name}</Text> },
+                  { title: "รายจ่ายจาก transaction", dataIndex: "totalPaid", key: "paid", align: "right", render: (val) => val > 0 ? <Text type="warning">฿{val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text> : "-" },
+                  { title: "เงินที่ได้คืน", dataIndex: "netBalance", key: "receive", align: "right", render: (bal) => bal > 0 ? <Text type="success">฿{bal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text> : "-" },
+                  { title: "เงินที่ต้องจ่ายคืน", dataIndex: "netBalance", key: "pay", align: "right", render: (bal) => bal < 0 ? <Text type="danger">฿{Math.abs(bal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text> : "-" }
                 ]}
+                scroll={{ x: 500 }}
               />
             </Col>
           </Row>
