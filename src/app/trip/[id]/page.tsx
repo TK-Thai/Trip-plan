@@ -589,10 +589,29 @@ function ActivityModal({
   const handleSubmit = async (values: any) => {
     setSaving(true);
     try {
+      let finalLat = values.lat;
+      let finalLng = values.lng;
+
+      // Auto-fetch coordinates if location name is provided but coords are missing
+      if (values.locationName && (!finalLat || !finalLng)) {
+        try {
+          const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(values.locationName)}&count=1&language=th&format=json`);
+          const geoData = await geoRes.json();
+          if (geoData.results && geoData.results.length > 0) {
+            finalLat = geoData.results[0].latitude;
+            finalLng = geoData.results[0].longitude;
+          }
+        } catch (e) {
+          console.warn("Failed to auto-geocode location", e);
+        }
+      }
+
       const url = "/api/activities";
       const method = activity ? "PUT" : "POST";
       const body = {
         ...values,
+        lat: finalLat,
+        lng: finalLng,
         id: activity?.id,
         dayId,
       };
@@ -917,44 +936,6 @@ function ExpenseModal({
 /* Overview Tab                                                       */
 /* ------------------------------------------------------------------ */
 function OverviewTab({ trip, setActiveTab, setShowExpenseModal }: any) {
-  const [weather, setWeather] = useState<any>(null);
-  const [weatherLoading, setWeatherLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchWeather() {
-      try {
-        setWeatherLoading(true);
-        // Try to get coords from first activity
-        let lat = null;
-        let lng = null;
-        const act = trip.days.flatMap((d: any) => d.activities).find((a: any) => a.lat && a.lng);
-        if (act) {
-          lat = act.lat;
-          lng = act.lng;
-        } else {
-          // Fallback to geocoding the trip name
-          const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trip.name)}&count=1&language=th&format=json`);
-          const geoData = await geoRes.json();
-          if (geoData.results && geoData.results.length > 0) {
-            lat = geoData.results[0].latitude;
-            lng = geoData.results[0].longitude;
-          }
-        }
-        
-        if (lat && lng) {
-          const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`);
-          const wData = await wRes.json();
-          setWeather(wData.current_weather);
-        }
-      } catch (err) {
-        console.error("Failed to fetch weather", err);
-      } finally {
-        setWeatherLoading(false);
-      }
-    }
-    fetchWeather();
-  }, [trip.name, trip.days]);
-
   const totalSpent = trip.expenses.reduce((sum: number, e: any) => sum + e.amount, 0);
   const perPerson = trip.members.length > 0 ? totalSpent / trip.members.length : 0;
 
@@ -987,21 +968,6 @@ function OverviewTab({ trip, setActiveTab, setShowExpenseModal }: any) {
           </Card>
         </Col>
       </Row>
-
-      {/* Weather */}
-      <Card size="small" title={<Space><CloudOutlined /> สภาพอากาศปัจจุบัน (Real-time)</Space>} loading={weatherLoading} styles={{ header: { padding: '0 16px', background: '#fafafa' }}}>
-        {weather ? (
-          <Space size={16} align="center">
-            <Typography.Title level={1} style={{ margin: 0, fontWeight: 400 }}>{weather.temperature}°C</Typography.Title>
-            <div>
-              <Typography.Text type="secondary" style={{ display: 'block' }}>ความเร็วลม: {weather.windspeed} km/h</Typography.Text>
-              <Typography.Text type="secondary">เวลาวัดล่าสุด: {weather.time.replace('T', ' ')}</Typography.Text>
-            </div>
-          </Space>
-        ) : (
-          <Typography.Text type="secondary">ไม่สามารถระบุตำแหน่งทริปเพื่อเช็กสภาพอากาศได้</Typography.Text>
-        )}
-      </Card>
 
       {/* Quick Links */}
       <Row gutter={[16, 16]}>
