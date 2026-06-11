@@ -504,7 +504,7 @@ function ExpenseView({
           <Title level={2} style={{ margin: 0, fontFamily: "var(--font-prompt), sans-serif", fontWeight: 700 }}>Expenses</Title>
           <Text type="secondary">{trip.expenses.length} transaction{trip.expenses.length !== 1 && 's'}</Text>
         </div>
-        <Button type="primary" size="large" style={{ borderRadius: 8, fontWeight: 600, background: '#3b82f6' }} icon={<PlusOutlined />} onClick={onAddExpense}>
+        <Button type="primary" size="large" style={{ borderRadius: 8, fontWeight: 600, background: '#10b981' }} icon={<PlusOutlined />} onClick={onAddExpense}>
           Add Expense
         </Button>
       </div>
@@ -512,7 +512,7 @@ function ExpenseView({
       {/* Summary Cards */}
       <Row gutter={[16, 16]}>
         <Col xs={24} md={12}>
-          <div style={{ background: '#3b82f6', color: '#fff', padding: 24, borderRadius: 16, height: '100%' }}>
+          <div style={{ background: '#10b981', color: '#fff', padding: 24, borderRadius: 16, height: '100%' }}>
             <div style={{ fontSize: 12, fontWeight: 600, opacity: 0.8, marginBottom: 8, letterSpacing: 0.5 }}>TOTAL SPENT</div>
             <div style={{ fontSize: 36, fontWeight: 700 }}>฿{totalExpense.toLocaleString()}</div>
           </div>
