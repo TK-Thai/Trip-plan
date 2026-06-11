@@ -28,6 +28,8 @@ import {
   Radio,
   Avatar,
   Divider,
+  Progress,
+  List,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -146,6 +148,14 @@ const CATEGORY_LABELS: Record<string, string> = {
   hotel: "ที่พัก",
   transport: "การเดินทาง",
   other: "อื่นๆ",
+};
+
+const CATEGORY_EMOJI: Record<string, string> = {
+  activity: "🎟️",
+  food: "🍜",
+  hotel: "🏨",
+  transport: "🚗",
+  other: "📦",
 };
 
 /* ------------------------------------------------------------------ */
@@ -470,56 +480,149 @@ function ExpenseView({
   const transactions = calculateSettlements(trip.expenses, trip.members);
   const balances = calculateBalances(trip.expenses, trip.members);
 
-  const expenseColumns = [
-    { title: "วันที่", dataIndex: "createdAt", key: "date", render: (val: string) => formatDate(val) },
-    { title: "รายการ", dataIndex: "description", key: "desc" },
-    { title: "หมวดหมู่", dataIndex: "category", key: "cat", render: (cat: string) => <Tag color={CATEGORY_COLORS[cat] || "default"}>{CATEGORY_LABELS[cat] || cat}</Tag> },
-    { title: "ผู้จ่าย", dataIndex: "paidById", key: "paid", render: (id: number) => {
-        const m = trip.members.find((x) => x.id === id);
-        return m ? <Tag color={m.color}>{m.name}</Tag> : "-";
-      }
-    },
-    { title: "ยอดเงิน (฿)", dataIndex: "amount", key: "amount", align: "right" as const, render: (val: number) => <Text strong>{val.toLocaleString()}</Text> },
-    { title: "จัดการ", key: "actions", align: "center" as const, render: (_: any, record: Expense) => (
-        <Space>
-          <Button size="small" type="text" icon={<EditOutlined />} onClick={() => onEditExpense(record)} />
-          <Popconfirm title="ยืนยันการลบ?" onConfirm={() => onDeleteExpense(record.id)}>
-            <Button size="small" type="text" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      )
-    },
-  ];
+  const categoryTotals = trip.expenses.reduce((acc, exp) => {
+    acc[exp.category] = (acc[exp.category] || 0) + exp.amount;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const breakdownData = Object.entries(categoryTotals)
+    .map(([cat, amount]) => ({
+      category: cat,
+      amount,
+      percent: totalExpense > 0 ? (amount / totalExpense) * 100 : 0
+    }))
+    .sort((a, b) => b.amount - a.amount);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24, maxWidth: 800, margin: "0 auto" }}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div>
+          <Title level={2} style={{ margin: 0, fontFamily: "var(--font-prompt), sans-serif", fontWeight: 700 }}>Expenses</Title>
+          <Text type="secondary">{trip.expenses.length} transaction{trip.expenses.length !== 1 && 's'}</Text>
+        </div>
+        <Button type="primary" size="large" style={{ borderRadius: 8, fontWeight: 600, background: '#3b82f6' }} icon={<PlusOutlined />} onClick={onAddExpense}>
+          Add Expense
+        </Button>
+      </div>
+
+      {/* Summary Cards */}
       <Row gutter={[16, 16]}>
         <Col xs={24} md={12}>
-          <Card>
-            <Statistic title="ค่าใช้จ่ายรวมทั้งทริป" value={totalExpense} prefix="฿" precision={2} />
-          </Card>
+          <div style={{ background: '#3b82f6', color: '#fff', padding: 24, borderRadius: 16, height: '100%' }}>
+            <div style={{ fontSize: 12, fontWeight: 600, opacity: 0.8, marginBottom: 8, letterSpacing: 0.5 }}>TOTAL SPENT</div>
+            <div style={{ fontSize: 36, fontWeight: 700 }}>฿{totalExpense.toLocaleString()}</div>
+          </div>
         </Col>
         <Col xs={24} md={12}>
-          <Card>
-            <Statistic title="เฉลี่ยต่อคน (โดยประมาณ)" value={trip.members.length > 0 ? totalExpense / trip.members.length : 0} prefix="฿" precision={2} />
-          </Card>
+          <div style={{ background: '#fff', border: '1px solid #f0f0f0', padding: 24, borderRadius: 16, height: '100%' }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#8c8c8c', marginBottom: 8, letterSpacing: 0.5 }}>TRANSACTIONS</div>
+            <div style={{ fontSize: 36, fontWeight: 700, color: '#1f2937' }}>{trip.expenses.length}</div>
+          </div>
         </Col>
       </Row>
 
-      <Card
-        title="รายการค่าใช้จ่าย"
-        extra={<Button type="primary" icon={<PlusOutlined />} onClick={onAddExpense}>เพิ่มค่าใช้จ่าย</Button>}
+      {/* Breakdown by Category */}
+      {breakdownData.length > 0 && (
+        <Card styles={{ body: { padding: '24px' } }} style={{ borderRadius: 16, border: '1px solid #f0f0f0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24 }}>
+            <Title level={5} style={{ margin: 0, fontWeight: 700 }}>Breakdown by Category</Title>
+            <Text type="secondary" style={{ fontSize: 12 }}>(THB converted)</Text>
+          </div>
+          
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {breakdownData.map(item => (
+              <div key={item.category}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                  <div style={{ 
+                    width: 40, height: 40, borderRadius: 8, background: '#f8fafc', 
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 
+                  }}>
+                    {CATEGORY_EMOJI[item.category] || "📦"}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 4 }}>
+                      <Text strong style={{ fontSize: 16 }}>{CATEGORY_LABELS[item.category] || item.category}</Text>
+                      <div style={{ textAlign: 'right' }}>
+                        <Text strong style={{ fontSize: 16 }}>฿{item.amount.toLocaleString()}</Text>
+                        <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>{Math.round(item.percent)}%</Text>
+                      </div>
+                    </div>
+                    <Progress percent={item.percent} showInfo={false} strokeColor="#10b981" trailColor="#f1f5f9" size={["100%", 8]} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* All Transactions */}
+      <Card 
+        styles={{ body: { padding: 0 } }} 
+        style={{ borderRadius: 16, border: '1px solid #f0f0f0', overflow: 'hidden' }}
       >
-        <Table
-          dataSource={trip.expenses}
-          columns={expenseColumns}
-          rowKey="id"
-          pagination={false}
-          scroll={{ x: 800 }}
-        />
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Title level={5} style={{ margin: 0, fontWeight: 700 }}>All Transactions</Title>
+          <Text type="secondary" style={{ fontSize: 14 }}>{trip.expenses.length} items</Text>
+        </div>
+        
+        {trip.expenses.length === 0 ? (
+          <div style={{ padding: 40, textAlign: 'center' }}>
+            <Empty description="No transactions yet" />
+          </div>
+        ) : (
+          <List
+            itemLayout="horizontal"
+            dataSource={trip.expenses}
+            renderItem={(item) => {
+              const paidBy = trip.members.find(m => m.id === item.paidById);
+              const splitWays = item.splits.length;
+              const perPerson = splitWays > 0 ? item.amount / splitWays : 0;
+              
+              return (
+                <List.Item 
+                  style={{ padding: '20px 24px', borderBottom: '1px solid #f0f0f0', background: '#fff' }}
+                  actions={[
+                    <Button 
+                      key="edit" 
+                      type="text" 
+                      icon={<EditOutlined style={{ color: '#f59e0b' }} />} 
+                      onClick={() => onEditExpense(item)} 
+                      style={{ border: '1px solid #f0f0f0', borderRadius: 8, width: 40, height: 40 }}
+                    />
+                  ]}
+                >
+                  <List.Item.Meta
+                    avatar={
+                      <div style={{ width: 48, height: 48, borderRadius: 12, background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
+                        {CATEGORY_EMOJI[item.category] || "📦"}
+                      </div>
+                    }
+                    title={
+                      <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
+                        {item.description}
+                      </div>
+                    }
+                    description={
+                      <div style={{ fontSize: 13, color: '#64748b' }}>
+                        Paid by {paidBy?.name || 'Unknown'} · Split {splitWays} {splitWays > 1 ? 'ways' : 'way'}
+                      </div>
+                    }
+                  />
+                  <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <Text strong style={{ fontSize: 16, color: '#1f2937' }}>฿{item.amount.toLocaleString()}</Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>฿{perPerson.toLocaleString(undefined, { maximumFractionDigits: 0 })}/person</Text>
+                  </div>
+                </List.Item>
+              );
+            }}
+          />
+        )}
       </Card>
 
-      <Card title="สรุปการเคลียร์เงิน (Settlement)">
+      {/* Settlement Section */}
+      <Card title="สรุปการเคลียร์เงิน (Settlement)" style={{ borderRadius: 16, border: '1px solid #f0f0f0' }}>
         {transactions.length === 0 ? (
           <Empty description="ไม่มีรายการเคลียร์เงิน" />
         ) : (
