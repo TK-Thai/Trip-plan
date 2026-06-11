@@ -25,6 +25,9 @@ import {
   message,
   theme,
   Statistic,
+  Radio,
+  Avatar,
+  Divider,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -38,6 +41,7 @@ import {
   EnvironmentOutlined,
   ClockCircleOutlined,
   DollarOutlined,
+  SettingOutlined,
 } from "@ant-design/icons";
 import { calculateSettlements, calculateBalances } from "@/lib/settlement";
 
@@ -672,6 +676,10 @@ function ExpenseModal({
   const [saving, setSaving] = useState(false);
   const [splitType, setSplitType] = useState<"equal" | "custom">("equal");
   const [splitWith, setSplitWith] = useState<number[]>([]);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // Watch amount to dynamically show split per person
+  const amountValue = Form.useWatch("amount", form) || 0;
 
   useEffect(() => {
     if (open) {
@@ -680,19 +688,24 @@ function ExpenseModal({
         const customAmounts: Record<number, number> = {};
         expense.splits.forEach(s => customAmounts[s.memberId] = s.shareAmount);
         setSplitWith(expense.splits.map(s => s.memberId));
+        
+        const isEqual = expense.splits.every(s => Math.abs(s.shareAmount - (expense.amount / expense.splits.length)) < 0.02);
+        setShowAdvanced(!isEqual);
+        
         form.setFieldsValue({
           ...expense,
-          splitType: "custom",
+          splitType: isEqual ? "equal" : "custom",
           splitWith: expense.splits.map(s => s.memberId),
           customAmounts,
         });
       } else {
         setSplitType("equal");
+        setShowAdvanced(false);
         const allIds = trip.members.map(m => m.id);
         setSplitWith(allIds);
         form.resetFields();
         form.setFieldsValue({
-          category: "other",
+          category: "food",
           splitType: "equal",
           splitWith: allIds,
         });
@@ -709,6 +722,8 @@ function ExpenseModal({
         ...values,
         id: expense?.id,
         tripId: trip.id,
+        splitWith: splitWith,
+        splitType: showAdvanced ? "custom" : "equal",
       };
 
       const res = await fetch(url, {
@@ -725,84 +740,164 @@ function ExpenseModal({
     }
   };
 
+  const toggleSplitMember = (memberId: number) => {
+    setSplitWith((prev) => {
+      const newSplit = prev.includes(memberId)
+        ? prev.filter((id) => id !== memberId)
+        : [...prev, memberId];
+      form.setFieldValue("splitWith", newSplit);
+      return newSplit;
+    });
+  };
+
+  const getInitials = (name: string) => name.substring(0, 2).toUpperCase();
+
   return (
     <Modal
-      title={expense ? "แก้ไขค่าใช้จ่าย" : "เพิ่มค่าใช้จ่าย"}
+      title={
+        <div style={{ textAlign: "center", width: "100%", fontSize: 18, fontWeight: 600 }}>
+          {expense ? "แก้ไขค่าใช้จ่าย" : "เพิ่มค่าใช้จ่าย"}
+        </div>
+      }
       open={open}
       onCancel={onClose}
-      onOk={() => form.submit()}
-      confirmLoading={saving}
+      footer={
+        <Button
+          type="primary"
+          block
+          size="large"
+          onClick={() => form.submit()}
+          loading={saving}
+          style={{ height: 48, fontSize: 16, borderRadius: 8 }}
+        >
+          Save Expense
+        </Button>
+      }
       destroyOnClose
       width={600}
+      bodyStyle={{ padding: "20px 0" }}
     >
-      <Form form={form} layout="vertical" onFinish={handleSubmit}>
-        <Row gutter={16}>
-          <Col span={16}>
-            <Form.Item name="description" label="รายการ" rules={[{ required: true }]}>
-              <Input />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item name="amount" label="จำนวนเงิน (฿)" rules={[{ required: true }]}>
-              <InputNumber style={{ width: "100%" }} min={0} />
-            </Form.Item>
-          </Col>
-        </Row>
+      <Form form={form} layout="vertical" onFinish={handleSubmit} style={{ padding: "0 24px" }}>
         
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item name="paidById" label="ผู้จ่ายเงิน" rules={[{ required: true }]}>
-              <Select>
-                {trip.members.map(m => (
-                  <Select.Option key={m.id} value={m.id}>{m.name}</Select.Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item name="category" label="หมวดหมู่">
-              <Select>
-                <Select.Option value="food">อาหาร</Select.Option>
-                <Select.Option value="transport">เดินทาง</Select.Option>
-                <Select.Option value="hotel">ที่พัก</Select.Option>
-                <Select.Option value="activity">กิจกรรม</Select.Option>
-                <Select.Option value="other">อื่นๆ</Select.Option>
-              </Select>
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Form.Item name="splitWith" label="หารกับใครบ้าง" rules={[{ required: true }]}>
-          <Select
-            mode="multiple"
-            onChange={setSplitWith}
-            options={trip.members.map(m => ({ label: m.name, value: m.id }))}
-          />
+        <Form.Item name="description" label={<Text type="secondary" style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.5 }}>EXPENSE NAME</Text>} rules={[{ required: true, message: "โปรดระบุชื่อรายการ" }]}>
+          <Input size="large" placeholder="เช่น Ramen, ค่าตั๋วเครื่องบิน..." style={{ borderRadius: 8 }} />
         </Form.Item>
 
-        <Form.Item name="splitType" label="วิธีหาร">
-          <Select onChange={(val) => setSplitType(val)}>
-            <Select.Option value="equal">หารเท่ากันทุกคน</Select.Option>
-            <Select.Option value="custom">กำหนดเอง</Select.Option>
+        <Form.Item label={<Text type="secondary" style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.5 }}>AMOUNT & CURRENCY</Text>} required>
+          <Input.Group compact style={{ display: "flex", width: "100%" }}>
+            <Select size="large" defaultValue="THB" style={{ width: "35%", borderRadius: "8px 0 0 8px" }}>
+              <Select.Option value="THB">THB ฿</Select.Option>
+            </Select>
+            <Form.Item name="amount" noStyle rules={[{ required: true, message: "โปรดระบุยอดเงิน" }]}>
+              <InputNumber
+                size="large"
+                style={{ width: "65%", borderRadius: "0 8px 8px 0" }}
+                min={0}
+                prefix="฿"
+                placeholder="1000"
+              />
+            </Form.Item>
+          </Input.Group>
+        </Form.Item>
+
+        <Form.Item name="category" label={<Text type="secondary" style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.5 }}>CATEGORY</Text>}>
+          <Radio.Group style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <Radio.Button value="flight" style={{ borderRadius: 16 }}>✈️ Flight</Radio.Button>
+            <Radio.Button value="hotel" style={{ borderRadius: 16 }}>🏨 Hotel</Radio.Button>
+            <Radio.Button value="food" style={{ borderRadius: 16 }}>🍜 Food</Radio.Button>
+            <Radio.Button value="transport" style={{ borderRadius: 16 }}>🚗 Transport</Radio.Button>
+            <Radio.Button value="activity" style={{ borderRadius: 16 }}>🎟️ Activity</Radio.Button>
+            <Radio.Button value="other" style={{ borderRadius: 16 }}>📦 Other</Radio.Button>
+          </Radio.Group>
+        </Form.Item>
+
+        <Form.Item name="paidById" label={<Text type="secondary" style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.5 }}>PAID BY</Text>} rules={[{ required: true, message: "โปรดระบุผู้จ่ายเงิน" }]}>
+          <Select size="large" style={{ borderRadius: 8 }}>
+            {trip.members.map(m => (
+              <Select.Option key={m.id} value={m.id}>{m.name}</Select.Option>
+            ))}
           </Select>
         </Form.Item>
 
-        {splitType === "custom" && splitWith.length > 0 && (
-          <Card size="small" style={{ background: "#fafafa" }}>
-            <Typography.Text strong>ระบุยอดที่แต่ละคนต้องจ่าย</Typography.Text>
-            {splitWith.map((id) => {
-              const m = trip.members.find(x => x.id === id);
+        <Divider />
+
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <Text type="secondary" style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.5 }}>SPLIT WITH</Text>
+            <Button type="text" size="small" icon={<SettingOutlined />} onClick={() => setShowAdvanced(!showAdvanced)}>
+              Advanced
+            </Button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {trip.members.map((m) => {
+              const isSelected = splitWith.includes(m.id);
               return (
-                <Form.Item
-                  key={id}
-                  name={["customAmounts", id]}
-                  label={m?.name}
-                  style={{ marginBottom: 8, marginTop: 8 }}
+                <div
+                  key={m.id}
+                  onClick={() => toggleSplitMember(m.id)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "10px 16px",
+                    borderRadius: 8,
+                    border: `1px solid ${isSelected ? "#1677ff" : "#d9d9d9"}`,
+                    background: isSelected ? "#e6f4ff" : "#ffffff",
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                  }}
                 >
-                  <InputNumber style={{ width: "100%" }} min={0} />
-                </Form.Item>
+                  <Space>
+                    <Avatar size="small" style={{ backgroundColor: m.color, color: "#fff" }}>{getInitials(m.name)}</Avatar>
+                    <Text strong={isSelected} style={{ color: isSelected ? "#1677ff" : "inherit" }}>{m.name}</Text>
+                  </Space>
+                  {isSelected && <CheckCircleOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
+                </div>
               );
             })}
+          </div>
+        </div>
+
+        {/* Dynamic Split Box */}
+        {!showAdvanced && (
+          <div style={{
+            background: "#f0f5ff",
+            padding: "16px 20px",
+            borderRadius: 8,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginTop: 16,
+          }}>
+            <Text style={{ color: "#1677ff", fontSize: 16 }}>Split {splitWith.length} ways</Text>
+            <div>
+              <Text strong style={{ fontSize: 20, color: "#1677ff" }}>
+                ฿{splitWith.length > 0 ? (amountValue / splitWith.length).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+              </Text>
+              <Text style={{ color: "#1677ff", fontSize: 14 }}> / person</Text>
+            </div>
+          </div>
+        )}
+
+        {/* Custom Split / Advanced */}
+        {showAdvanced && splitWith.length > 0 && (
+          <Card size="small" style={{ background: "#fafafa", marginTop: 16, borderRadius: 8 }}>
+            <Typography.Text strong>ระบุยอดที่แต่ละคนต้องจ่าย (กำหนดเอง)</Typography.Text>
+            <div style={{ marginTop: 12 }}>
+              {splitWith.map((id) => {
+                const m = trip.members.find(x => x.id === id);
+                return (
+                  <Form.Item
+                    key={id}
+                    name={["customAmounts", id]}
+                    label={m?.name}
+                    style={{ marginBottom: 8 }}
+                  >
+                    <InputNumber size="large" style={{ width: "100%", borderRadius: 8 }} min={0} prefix="฿" />
+                  </Form.Item>
+                );
+              })}
+            </div>
           </Card>
         )}
       </Form>
