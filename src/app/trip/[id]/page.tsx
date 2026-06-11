@@ -661,7 +661,7 @@ function ExpenseView({
                   { title: "ชื่อ", dataIndex: "name", key: "name", render: (name) => <Text strong>{name}</Text> },
                   { title: "ยอดที่จ่าย", dataIndex: "totalPaid", key: "paid", align: "right", render: (val) => val > 0 ? <Text type="warning">฿{val.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</Text> : "-" },
                   { title: "รับคืน", dataIndex: "netBalance", key: "receive", align: "right", render: (bal) => bal > 0 ? <Text type="success">฿{bal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</Text> : "-" },
-                  { title: "จ่ายเพิ่ม", dataIndex: "netBalance", key: "pay", align: "right", render: (bal) => bal < 0 ? <Text type="danger">฿{Math.abs(bal).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</Text> : "-" }
+                  { title: "จ่ายคืน", dataIndex: "netBalance", key: "pay", align: "right", render: (bal) => bal < 0 ? <Text type="danger">฿{Math.abs(bal).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</Text> : "-" }
                 ]}
                 scroll={{ x: 'max-content' }}
               />
